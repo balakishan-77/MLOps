@@ -18,8 +18,10 @@ except RepositoryNotFoundError:
     create_repo(repo_id=repo_id, repo_type=repo_type, private=False)
     print(f"Space '{repo_id}' created.")
 
+print(f"Uploading data folder to space '{repo_id}'...")
 api.upload_folder(
     folder_path="data",
     repo_id=repo_id,
     repo_type=repo_type,
 )
+print(f"Uploading data folder to space '{repo_id}' completed.")
