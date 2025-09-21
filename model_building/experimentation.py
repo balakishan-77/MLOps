@@ -62,6 +62,6 @@ f1_scorer = make_scorer(f1_score)
 
 
 # Hyperparameter tuning with RandomizedSearchCV
-rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=2, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
+rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=20, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
 rcv_obj = rcv_obj.fit(Xtrain, ytrain)
 print(rcv_obj.best_params_)
