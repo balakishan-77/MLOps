@@ -387,7 +387,7 @@ print(f"Uploading splitted dataset to space '{repo_id}'...")
 for file_path in files:
     print(f"Uploading file '{file_path}'...")
     api.upload_file(
-        path_or_fileobj=file_path,
+        path_or_fileobj="data/"+file_path,
         path_in_repo=file_path.split("/")[-1],  # just the filename
         repo_id=repo_id,
         repo_type=repo_type,
