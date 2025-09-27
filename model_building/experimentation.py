@@ -13,6 +13,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import f1_score, make_scorer
 import os
 import numpy as np
+import mlflow   
 
 
 # Define constants for the dataset and output paths
