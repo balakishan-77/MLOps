@@ -15,6 +15,15 @@ import os
 import numpy as np
 import mlflow   
 
+from sklearn.metrics import accuracy_score, classification_report, recall_score
+import joblib
+
+
+
+
+# Set up MLflow experiment tracking
+mlflow.set_tracking_uri("http://localhost:5000")  # Set to localhost for local MLflow server
+mlflow.set_experiment("Tourism_Package_Experiment")
 
 # Define constants for the dataset and output paths
 api = HfApi(token=os.getenv("HF_TOKEN"))
@@ -63,6 +72,64 @@ f1_scorer = make_scorer(f1_score)
 
 
 # Hyperparameter tuning with RandomizedSearchCV
-rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=20, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
-rcv_obj = rcv_obj.fit(Xtrain, ytrain)
-print(rcv_obj.best_params_)
+# rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=20, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
+# rcv_obj = rcv_obj.fit(Xtrain, ytrain)
+# print(rcv_obj.best_params_)
+
+with mlflow.start_run():
+    rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=20, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
+    rcv_obj = rcv_obj.fit(Xtrain, ytrain)
+    print(rcv_obj.best_params_)
+
+    # Log all parameter combinations and their mean test scores
+    results = rcv_obj.cv_results_
+    for i in range(len(results['params'])):
+        param_set = results['params'][i]
+        mean_score = results['mean_test_score'][i]
+        std_score = results['std_test_score'][i]
+
+        # Log each combination as a separate MLflow run
+        with mlflow.start_run(nested=True):
+            mlflow.log_params(param_set)
+
+            mlflow.log_metric("mean_test_score", mean_score)
+            mlflow.log_metric("std_test_score", std_score)
+            print(param_set, mean_score, std_score)
+
+    # Log best parameters separately in main run
+    mlflow.log_params(rcv_obj.best_params_)
+
+
+    # Store and evaluate the best model
+    best_model = rcv_obj.best_estimator_
+
+    classification_threshold = 0.45
+
+    y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
+    y_pred_train = (y_pred_train_proba >= classification_threshold).astype(int)
+
+    y_pred_test_proba = best_model.predict_proba(Xtest)[:, 1]
+    y_pred_test = (y_pred_test_proba >= classification_threshold).astype(int)
+
+    train_report = classification_report(ytrain, y_pred_train, output_dict=True)
+    test_report = classification_report(ytest, y_pred_test, output_dict=True)
+
+    # Log the metrics for the best model
+    mlflow.log_metrics({
+        "train_accuracy": train_report['accuracy'],
+        "train_precision": train_report['1']['precision'],
+        "train_recall": train_report['1']['recall'],
+        "train_f1-score": train_report['1']['f1-score'],
+        "test_accuracy": test_report['accuracy'],
+        "test_precision": test_report['1']['precision'],
+        "test_recall": test_report['1']['recall'],
+        "test_f1-score": test_report['1']['f1-score']
+    })
+
+    # Save the model locally
+    model_path = "best_churn_model_v1.joblib"
+    joblib.dump(best_model, model_path)
+
+    # Log the model artifact
+    mlflow.log_artifact(model_path, artifact_path="model")
+    print(f"Model saved as artifact at: {model_path}")
