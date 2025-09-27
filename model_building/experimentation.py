@@ -17,7 +17,7 @@ from imblearn.pipeline import Pipeline as ImbPipeline  # Use imblearn pipeline f
 from imblearn.over_sampling import SMOTE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import f1_score, make_scorer
+from sklearn.metrics import f1_score, make_scorer, recall_score
 import numpy as np
 import mlflow   
 
@@ -80,13 +80,16 @@ param_grid = {"classifier__n_estimators": np.arange(10, 70),
 # Create the f1_scorer
 f1_scorer = make_scorer(f1_score)
 
+# Create the recall_scorer
+recall_scorer = make_scorer(recall_score)
+
 # --------------------------------------------------------------------
 # Start experimentation with RandomizedSearchCV and log results to MLflow
 # --------------------------------------------------------------------
 
 # Start an MLflow run
 with mlflow.start_run():
-    rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=20, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
+    rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=200, scoring=recall_scorer, cv=10, n_jobs=-1, verbose=2)
     rcv_obj = rcv_obj.fit(Xtrain, ytrain)
     print(rcv_obj.best_params_)
 
