@@ -2,7 +2,12 @@
 # Import necessary modules
 # --------------------------------------------------------------------
 
-from huggingface_hub import HfApi
+
+from huggingface_hub.utils import RepositoryNotFoundError, HfHubHTTPError
+from huggingface_hub import HfApi, create_repo
+import os
+
+
 import pandas as pd
 from sklearn.pipeline import make_pipeline, Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
@@ -13,7 +18,6 @@ from imblearn.over_sampling import SMOTE
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import f1_score, make_scorer
-import os
 import numpy as np
 import mlflow   
 
