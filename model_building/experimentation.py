@@ -126,10 +126,36 @@ with mlflow.start_run():
         "test_f1-score": test_report['1']['f1-score']
     })
 
+    print("Training Classification Report:")
+    print(train_report)
+    print("Testing Classification Report:")
+    print(test_report)
+
     # Save the model locally
-    model_path = "best_churn_model_v1.joblib"
+    model_path = "best_tourism_package_model_v1.joblib"
     joblib.dump(best_model, model_path)
 
     # Log the model artifact
     mlflow.log_artifact(model_path, artifact_path="model")
     print(f"Model saved as artifact at: {model_path}")
+
+        # Upload to Hugging Face
+    repo_id = "balakishan77/Tourism_Package"
+    repo_type = "model"
+
+    # Step 1: Check if the space exists
+    try:
+        api.repo_info(repo_id=repo_id, repo_type=repo_type)
+        print(f"Space '{repo_id}' already exists. Using it.")
+    except RepositoryNotFoundError:
+        print(f"Space '{repo_id}' not found. Creating new space...")
+        create_repo(repo_id=repo_id, repo_type=repo_type, private=False)
+        print(f"Space '{repo_id}' created.")
+
+    # create_repo("churn-model", repo_type="model", private=False)
+    api.upload_file(
+        path_or_fileobj="best_tourism_package_model_v1.joblib",
+        path_in_repo="best_tourism_package_model_v1.joblib",
+        repo_id=repo_id,
+        repo_type=repo_type,
+    )
