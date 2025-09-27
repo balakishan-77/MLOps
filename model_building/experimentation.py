@@ -1,5 +1,7 @@
-
+# --------------------------------------------------------------------
 # Import necessary modules
+# --------------------------------------------------------------------
+
 from huggingface_hub import HfApi
 import pandas as pd
 from sklearn.pipeline import make_pipeline, Pipeline
@@ -18,12 +20,16 @@ import mlflow
 from sklearn.metrics import accuracy_score, classification_report, recall_score
 import joblib
 
-
-
-
-# Set up MLflow experiment tracking
+# --------------------------------------------------------------------
+# Setup mlflow experiment configuration
+# --------------------------------------------------------------------
 mlflow.set_tracking_uri("http://localhost:5000")  # Set to localhost for local MLflow server
 mlflow.set_experiment("Tourism_Package_Experiment")
+
+
+# --------------------------------------------------------------------
+# Create preprocessor, pipeline, and hyperparameter grid
+# --------------------------------------------------------------------
 
 # Define constants for the dataset and output paths
 api = HfApi(token=os.getenv("HF_TOKEN"))
@@ -70,12 +76,11 @@ param_grid = {"classifier__n_estimators": np.arange(10, 70),
 # Create the f1_scorer
 f1_scorer = make_scorer(f1_score)
 
+# --------------------------------------------------------------------
+# Start experimentation with RandomizedSearchCV and log results to MLflow
+# --------------------------------------------------------------------
 
-# Hyperparameter tuning with RandomizedSearchCV
-# rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=20, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
-# rcv_obj = rcv_obj.fit(Xtrain, ytrain)
-# print(rcv_obj.best_params_)
-
+# Start an MLflow run
 with mlflow.start_run():
     rcv_obj = RandomizedSearchCV(pipeline, param_grid, n_iter=20, scoring=f1_scorer, cv=10, n_jobs=-1, verbose=2)
     rcv_obj = rcv_obj.fit(Xtrain, ytrain)
@@ -103,33 +108,40 @@ with mlflow.start_run():
     # Store and evaluate the best model
     best_model = rcv_obj.best_estimator_
 
-    classification_threshold = 0.45
 
-    y_pred_train_proba = best_model.predict_proba(Xtrain)[:, 1]
-    y_pred_train = (y_pred_train_proba >= classification_threshold).astype(int)
+    # Evaluate on validation and testing data
+    classification_threshold = 0.50
+
+    y_pred_val_proba = best_model.predict_proba(Xval)[:, 1]
+    y_pred_val = (y_pred_val_proba >= classification_threshold).astype(int)
 
     y_pred_test_proba = best_model.predict_proba(Xtest)[:, 1]
     y_pred_test = (y_pred_test_proba >= classification_threshold).astype(int)
 
-    train_report = classification_report(ytrain, y_pred_train, output_dict=True)
+    val_report = classification_report(yval, y_pred_val, output_dict=True)
     test_report = classification_report(ytest, y_pred_test, output_dict=True)
 
-    # Log the metrics for the best model
+    # Log the validation and test metrics for the best model
     mlflow.log_metrics({
-        "train_accuracy": train_report['accuracy'],
-        "train_precision": train_report['1']['precision'],
-        "train_recall": train_report['1']['recall'],
-        "train_f1-score": train_report['1']['f1-score'],
+        "val_accuracy": val_report['accuracy'],
+        "val_precision": val_report['1']['precision'],
+        "val_recall": val_report['1']['recall'],
+        "val_f1-score": val_report['1']['f1-score'],
         "test_accuracy": test_report['accuracy'],
         "test_precision": test_report['1']['precision'],
         "test_recall": test_report['1']['recall'],
         "test_f1-score": test_report['1']['f1-score']
     })
 
-    print("Training Classification Report:")
-    print(train_report)
+    print("Validation Classification Report:")
+    print(val_report)
     print("Testing Classification Report:")
     print(test_report)
+
+
+    # --------------------------------------------------------------------
+    # Save the best model as a joblib file and upload to hugging face
+    # --------------------------------------------------------------------
 
     # Save the model locally
     model_path = "best_tourism_package_model_v1.joblib"
@@ -139,7 +151,7 @@ with mlflow.start_run():
     mlflow.log_artifact(model_path, artifact_path="model")
     print(f"Model saved as artifact at: {model_path}")
 
-        # Upload to Hugging Face
+    # Upload to Hugging Face
     repo_id = "balakishan77/Tourism_Package"
     repo_type = "model"
 
