@@ -24,4 +24,4 @@ api.upload_folder(
     repo_id=repo_id,
     repo_type=repo_type,
 )
-print(f"Uploading data folder to space '{repo_id}' completed.")
+print(f"Uploading data folder to HF space '{repo_id}' completed.")
