@@ -19,3 +19,14 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: python model_building/data_register.py
 
+  data-prep:
+    needs: register-dataset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: pip install -r deployment/requirements.txt
+      - name: Run Data Preparation
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python model_building/prep.py
